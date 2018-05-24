@@ -43,4 +43,22 @@ class Share {
 
     return channel.invokeMethod('share', params);
   }
+
+  static Future<void> shareAnything(String path, String mimeType, {Rect sharePositionOrigin}) {
+    assert(path != null);
+    assert(path.isNotEmpty);
+    final Map<String, dynamic> params = <String, dynamic>{
+      'path': path,
+      'mimeType': mimeType,
+    };
+
+    if (sharePositionOrigin != null) {
+      params['originX'] = sharePositionOrigin.left;
+      params['originY'] = sharePositionOrigin.top;
+      params['originWidth'] = sharePositionOrigin.width;
+      params['originHeight'] = sharePositionOrigin.height;
+    }
+
+    return channel.invokeMethod('shareAnything', params);
+  }
 }
