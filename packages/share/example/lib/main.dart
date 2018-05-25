@@ -4,6 +4,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:share/share.dart';
+import 'dart:async';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(new DemoApp());
@@ -16,6 +18,33 @@ class DemoApp extends StatefulWidget {
 
 class DemoAppState extends State<DemoApp> {
   String text = '';
+  static const stream = const EventChannel('com.yourcompany.eventchannelsample/stream');
+
+  bool timerEnabled = false;
+  int _timer = 0;
+  StreamSubscription _timerSubscription = null;
+
+  void _enableTimer() {
+    if (_timerSubscription == null) {
+      _timerSubscription = stream.receiveBroadcastStream().listen(_updateTimer);
+    }
+    timerEnabled = true;
+    debugPrint("enabled Timer");
+  }
+
+  void _disableTimer() {
+    if (_timerSubscription != null) {
+      _timerSubscription.cancel();
+      _timerSubscription = null;
+    }
+    timerEnabled = false;
+    debugPrint("disabled Timer");
+  }
+
+  void _updateTimer(dynamic timer) {
+    debugPrint("Timer $timer");
+    setState(() => _timer = timer);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +89,11 @@ class DemoAppState extends State<DemoApp> {
                                   sharePositionOrigin:
                                       box.localToGlobal(Offset.zero) &
                                           box.size);
+                              if (!timerEnabled) {
+                                _enableTimer();
+                              } else {
+                                _disableTimer();
+                              }
                             },
                     );
                   },

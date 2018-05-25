@@ -7,10 +7,11 @@ package io.flutter.plugins.shareexample;
 import android.content.Intent;
 import android.os.Bundle;
 
+import io.flutter.app.FlutterActivity;
 import io.flutter.plugins.GeneratedPluginRegistrant;
 import io.flutter.plugins.share.ShareReceiverActivity;
 
-public class MainActivity extends ShareReceiverActivity {
+public class MainActivity extends FlutterActivity {
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -18,4 +19,5 @@ public class MainActivity extends ShareReceiverActivity {
     GeneratedPluginRegistrant.registerWith(this);
     startActivity(new Intent(this, ShareReceiverActivity.class));
   }
+
 }

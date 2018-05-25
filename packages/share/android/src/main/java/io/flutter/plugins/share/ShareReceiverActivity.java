@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 import io.flutter.app.FlutterActivity;
 import io.flutter.plugin.common.EventChannel;
+import io.flutter.plugin.common.PluginRegistry;
 import io.reactivex.Observable;
 import io.reactivex.disposables.Disposable;
 
@@ -24,7 +25,6 @@ public class ShareReceiverActivity extends FlutterActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
         // Get intent, action and MIME type
 		Intent intent = getIntent();
 		String action = intent.getAction();
@@ -35,18 +35,25 @@ public class ShareReceiverActivity extends FlutterActivity {
 //				handleSendText(intent); // Handle text being sent
     			String sharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
 				Log.w(TAG, "receiving shared text: " + sharedText);
-			} else if (type.startsWith("image/")) {
+			} else {
 //				handleSendImage(intent); // Handle single image being sent
 				Uri imageUri = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
 				Log.w(TAG, "receiving shared file: " + imageUri);
 			}
+
+			callMainActivity();
 		} else if (Intent.ACTION_SEND_MULTIPLE.equals(action) && type != null) {
 			Log.w(TAG, "receiving shared files!");
 			ArrayList<Uri> imageUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
 			if (type.startsWith("image/")) {
 //				handleSendMultipleImages(intent); // Handle multiple images being sent
 			}
+
+			callMainActivity();
 		} else {
+
+			Log.w(TAG, "initializing eventChannel");
+
 			// Handle other intents, such as being started from the home screen
 			new EventChannel(getFlutterView(), STREAM).setStreamHandler(new EventChannel.StreamHandler() {
 				@Override
@@ -73,5 +80,20 @@ public class ShareReceiverActivity extends FlutterActivity {
 
 		}
 
+		finish();
+//		callMainActivity();
+
     }
+
+    public void callMainActivity() {
+    	Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+//    	Intent launchIntent = getPackageManager().getLaunchIntentForPackage("pt.sportzone.everyzone");
+//    	launchIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+    	launchIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+    	launchIntent.setAction(Intent.ACTION_MAIN);
+//    	launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+		startActivity(launchIntent);
+//		finishAffinity();
+		finish();
+	}
 }
