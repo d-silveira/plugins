@@ -17,33 +17,32 @@ class DemoApp extends StatefulWidget {
 }
 
 class DemoAppState extends State<DemoApp> {
-  String text = '';
-  static const stream = const EventChannel('com.yourcompany.eventchannelsample/stream');
+  String _text = '';
+  static const stream = const EventChannel('io.flutter.plugins.shareanything/stream');
 
-  bool timerEnabled = false;
-  int _timer = 0;
-  StreamSubscription _timerSubscription = null;
+  bool shareReceiveEnabled = false;
+  StreamSubscription _shareReceiveSubscription = null;
 
   void _enableTimer() {
-    if (_timerSubscription == null) {
-      _timerSubscription = stream.receiveBroadcastStream().listen(_updateTimer);
+    if (_shareReceiveSubscription == null) {
+      _shareReceiveSubscription = stream.receiveBroadcastStream().listen(_receiveShare);
     }
-    timerEnabled = true;
-    debugPrint("enabled Timer");
+    shareReceiveEnabled = true;
+    debugPrint("enabled share receiving");
   }
 
   void _disableTimer() {
-    if (_timerSubscription != null) {
-      _timerSubscription.cancel();
-      _timerSubscription = null;
+    if (_shareReceiveSubscription != null) {
+      _shareReceiveSubscription.cancel();
+      _shareReceiveSubscription = null;
     }
-    timerEnabled = false;
-    debugPrint("disabled Timer");
+    shareReceiveEnabled = false;
+    debugPrint("disabled share receiving");
   }
 
-  void _updateTimer(dynamic timer) {
-    debugPrint("Timer $timer");
-    setState(() => _timer = timer);
+  void _receiveShare(dynamic share) {
+    debugPrint("Share received - $share");
+    setState(() => _text = share);
   }
 
   @override
@@ -66,7 +65,7 @@ class DemoAppState extends State<DemoApp> {
                   ),
                   maxLines: 2,
                   onChanged: (String value) => setState(() {
-                        text = value;
+                        _text = value;
                       }),
                 ),
                 const Padding(padding: const EdgeInsets.only(top: 24.0)),
@@ -74,7 +73,7 @@ class DemoAppState extends State<DemoApp> {
                   builder: (BuildContext context) {
                     return new RaisedButton(
                       child: const Text('Share'),
-                      onPressed: text.isEmpty
+                      onPressed: _text.isEmpty
                           ? null
                           : () {
                               // A builder is used to retrieve the context immediately
@@ -85,11 +84,15 @@ class DemoAppState extends State<DemoApp> {
                               // a RenderObjectWidget. The RaisedButton's RenderObject
                               // has its position and size after it's built.
                               final RenderBox box = context.findRenderObject();
-                              Share.share(text,
+//                              Share.share(_text,
+//                                  sharePositionOrigin:
+//                                      box.localToGlobal(Offset.zero) &
+//                                          box.size);
+                              Share.shareAnything("content://0@media/external/images/media/2129", "image/*",
                                   sharePositionOrigin:
                                       box.localToGlobal(Offset.zero) &
                                           box.size);
-                              if (!timerEnabled) {
+                              if (!shareReceiveEnabled) {
                                 _enableTimer();
                               } else {
                                 _disableTimer();

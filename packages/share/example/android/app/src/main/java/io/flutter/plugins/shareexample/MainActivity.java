@@ -4,31 +4,17 @@
 
 package io.flutter.plugins.shareexample;
 
-import android.content.Intent;
 import android.os.Bundle;
 
-import io.flutter.app.FlutterActivity;
 import io.flutter.plugins.GeneratedPluginRegistrant;
-import io.flutter.plugins.share.ShareReceiver;
+import io.flutter.plugins.share.FlutterShareReceiverActivity;
 
-public class MainActivity extends FlutterActivity {
-
-	ShareReceiver shareReceiver = null;
+public class MainActivity extends FlutterShareReceiverActivity {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		GeneratedPluginRegistrant.registerWith(this);
 
-		if (shareReceiver == null) {
-			shareReceiver = new ShareReceiver(getFlutterView(), this);
-		}
-
-	}
-
-	@Override
-	protected void onNewIntent(Intent intent) {
-		super.onNewIntent(intent);
-		shareReceiver.handleIntent(intent);
 	}
 }
