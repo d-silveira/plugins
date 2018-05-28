@@ -5,6 +5,13 @@ import android.os.Bundle;
 
 import io.flutter.app.FlutterActivity;
 
+/**
+ * Share intent receiver, passes it along to the flutter activity
+ *
+ * @author Duarte Silveira
+ * @version 1
+ * @since 25/05/18
+ */
 public class ShareReceiverActivityWorker extends FlutterActivity {
 
     @Override

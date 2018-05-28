@@ -1,3 +1,4 @@
+// Copyright 2018 Duarte Silveira
 // Copyright 2017 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -18,12 +19,13 @@ class DemoApp extends StatefulWidget {
 
 class DemoAppState extends State<DemoApp> {
   String _text = '';
-  static const stream = const EventChannel('io.flutter.plugins.shareanything/stream');
+  String _shared = '';
+  static const stream = const EventChannel('plugins.flutter.io/receiveshare');
 
   bool shareReceiveEnabled = false;
   StreamSubscription _shareReceiveSubscription = null;
 
-  void _enableTimer() {
+  void _enableShareReceiving() {
     if (_shareReceiveSubscription == null) {
       _shareReceiveSubscription = stream.receiveBroadcastStream().listen(_receiveShare);
     }
@@ -31,7 +33,7 @@ class DemoAppState extends State<DemoApp> {
     debugPrint("enabled share receiving");
   }
 
-  void _disableTimer() {
+  void _disableShareReceiving() {
     if (_shareReceiveSubscription != null) {
       _shareReceiveSubscription.cancel();
       _shareReceiveSubscription = null;
@@ -40,9 +42,14 @@ class DemoAppState extends State<DemoApp> {
     debugPrint("disabled share receiving");
   }
 
-  void _receiveShare(dynamic share) {
-    debugPrint("Share received - $share");
-    setState(() => _text = share);
+  void _receiveShare(dynamic shared) {
+    debugPrint("Share received - $shared");
+    setState(() { _shared = !shared.containsKey(Share.TYPE)
+        ? ''
+        : (shared[Share.TYPE] == "text/plain"
+          ? shared[Share.TEXT]
+          : shared[Share.PATH]);
+    });
   }
 
   @override
@@ -84,23 +91,31 @@ class DemoAppState extends State<DemoApp> {
                               // a RenderObjectWidget. The RaisedButton's RenderObject
                               // has its position and size after it's built.
                               final RenderBox box = context.findRenderObject();
-//                              Share.share(_text,
-//                                  sharePositionOrigin:
-//                                      box.localToGlobal(Offset.zero) &
-//                                          box.size);
-                              Share.shareAnything("content://0@media/external/images/media/2129", "image/*",
+                              Share.share(_text,
                                   sharePositionOrigin:
                                       box.localToGlobal(Offset.zero) &
                                           box.size);
-                              if (!shareReceiveEnabled) {
-                                _enableTimer();
-                              } else {
-                                _disableTimer();
-                              }
+//                              Share.shareAnything("content://0@media/external/images/media/2129", "image/*",
+//                                  sharePositionOrigin:
+//                                      box.localToGlobal(Offset.zero) &
+//                                          box.size);
                             },
                     );
                   },
                 ),
+                const Padding(padding: const EdgeInsets.only(top: 24.0)),
+                new RaisedButton(
+                  child: const Text('Toggle share receiving'),
+                  onPressed: () {
+                          if (!shareReceiveEnabled) {
+                            _enableShareReceiving();
+                          } else {
+                            _disableShareReceiving();
+                          }
+                        },
+                ),
+                const Padding(padding: const EdgeInsets.only(top: 24.0)),
+                new Text(_shared),
               ],
             ),
           )),

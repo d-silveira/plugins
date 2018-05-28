@@ -1,4 +1,4 @@
-# Share plugin
+# Share Anything plugin
 
 [![pub package](https://img.shields.io/pub/v/share.svg)](https://pub.dartlang.org/packages/share)
 

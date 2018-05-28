@@ -8,7 +8,6 @@ buildscript {
 
     dependencies {
         classpath 'com.android.tools.build:gradle:3.1.2'
-        classpath 'me.tatarka:gradle-retrolambda:3.7.0'
     }
 }
 rootProject.allprojects {
@@ -18,7 +17,6 @@ rootProject.allprojects {
     }
 }
 apply plugin: 'com.android.library'
-apply plugin: 'me.tatarka.retrolambda'
 android {
     compileSdkVersion 27
 
@@ -32,6 +30,4 @@ android {
 }
 
 dependencies {
-    implementation 'io.reactivex.rxjava2:rxandroid:2.0.1'
-    implementation 'io.reactivex.rxjava2:rxjava:2.1.7'
 }

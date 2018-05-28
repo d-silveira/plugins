@@ -4,22 +4,33 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import io.flutter.app.FlutterActivity;
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
 
 /**
+ * main activity super, handles eventChannel sink creation
+ * 					, share intent parsing and redirecting to eventChannel sink stream
+ *
  * @author Duarte Silveira
  * @version 1
  * @since 25/05/18
  */
 public class FlutterShareReceiverActivity extends FlutterActivity {
 
-	public static final String STREAM = "io.flutter.plugins.shareanything/stream";
+	public static final String STREAM = "plugins.flutter.io/receiveshare";
+	public static final String TITLE  = "title";
+	public static final String TEXT   = "text";
+	public static final String PATH   = "path";
+	public static final String TYPE   = "type";
+	public static final String IS_MULTIPLE   = "is_multiple";
 
 	private EventChannel.EventSink eventSink = null;
 	private boolean inited = false;
@@ -70,20 +81,46 @@ public class FlutterShareReceiverActivity extends FlutterActivity {
 
 		if (Intent.ACTION_SEND.equals(action) && type != null) {
 			if ("text/plain".equals(type)) {
+				String sharedTitle = intent.getStringExtra(Intent.EXTRA_SUBJECT);
+				Log.i(getClass().getSimpleName(), "receiving shared title: " + sharedTitle);
 				String sharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
 				Log.i(getClass().getSimpleName(), "receiving shared text: " + sharedText);
 				if (eventSink != null) {
-					eventSink.success(sharedText);
+					Map<String, String> params = new HashMap<>();
+					params.put(TYPE, type);
+					params.put(TEXT, sharedText);
+					if (!TextUtils.isEmpty(sharedTitle)) {
+						params.put(TITLE, sharedTitle);
+					}
+					eventSink.success(params);
 				}
 			} else {
-				Uri imageUri = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
-				Log.i(getClass().getSimpleName(), "receiving shared file: " + imageUri);
+				String sharedTitle = intent.getStringExtra(Intent.EXTRA_SUBJECT);
+				Log.i(getClass().getSimpleName(), "receiving shared title: " + sharedTitle);
+				Uri sharedUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+				Log.i(getClass().getSimpleName(), "receiving shared file: " + sharedUri);
+				if (eventSink != null) {
+					Map<String, String> params = new HashMap<>();
+					params.put(TYPE, type);
+					params.put(PATH, sharedUri.toString());
+					if (!TextUtils.isEmpty(sharedTitle)) {
+						params.put(TITLE, sharedTitle);
+					}
+					eventSink.success(params);
+				}
 			}
 
 		} else if (Intent.ACTION_SEND_MULTIPLE.equals(action) && type != null) {
 			Log.i(getClass().getSimpleName(), "receiving shared files!");
 			ArrayList<Uri> imageUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
-			if (type.startsWith("image/")) {
+			if (eventSink != null) {
+				Map<String, String> params = new HashMap<>();
+				params.put(TYPE, type);
+				params.put(IS_MULTIPLE, "true");
+				for (int i = 0; i < imageUris.size(); i++) {
+					params.put(Integer.toString(i), imageUris.get(i).toString());
+				}
+				eventSink.success(params);
 			}
 
 		}
