@@ -9,113 +9,119 @@ import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:meta/meta.dart' show visibleForTesting;
 
+class ShareType {
+  final String _type;
+  const ShareType._internal(this._type);
+  @override
+  String toString() {
+    return _type;
+  }
+
+  static const ShareType TYPE_PLAIN_TEXT = const ShareType._internal("text/plain");
+  static const ShareType TYPE_IMAGE = const ShareType._internal("image/*");
+  static const ShareType TYPE_FILE = const ShareType._internal("*/*");
+
+}
+
 /// Plugin for summoning a platform share sheet.
 class Share {
 
-	static final String TITLE  = "title";
-	static final String TEXT   = "text";
-	static final String PATH   = "path";
-	static final String TYPE   = "type";
-	static final String IS_MULTIPLE   = "is_multiple";
+  static const String TITLE = "title";
+  static const String TEXT = "text";
+  static const String PATH = "path";
+  static const String TYPE = "type";
+  static const String IS_MULTIPLE = "is_multiple";
+
+  final ShareType mimeType;
+  final String title;
+  final String text;
+  final String path;
+  final List<Share> shares;
+
+  const Share.plainText({
+    this.title,
+    this.text
+  }) : assert(text != null),
+       this.mimeType = ShareType.TYPE_PLAIN_TEXT,
+       this.path = '',
+       this.shares = const[];
+
+  const Share.file({
+    this.mimeType = ShareType.TYPE_FILE,
+    this.title,
+    this.path,
+    this.text = ''
+  }) : assert(mimeType != null),
+       assert(path != null),
+       this.shares = const[];
+
+  const Share.image({
+    this.mimeType = ShareType.TYPE_IMAGE,
+    this.title,
+    this.path,
+    this.text = ''
+  }) : assert(mimeType != null),
+       assert(path != null),
+       this.shares = const[];
+
+  const Share.multiple({
+    this.mimeType = ShareType.TYPE_FILE,
+    this.title,
+    this.shares
+  }) : assert(mimeType != null),
+       assert(shares != null),
+       this.text = '',
+       this.path = '';
 
   /// [MethodChannel] used to communicate with the platform side.
   @visibleForTesting
-  static const MethodChannel channel = const MethodChannel('plugins.flutter.io/shareanything');
+  static const MethodChannel channel = const MethodChannel('plugins.flutter.io/share');
 
-  /// Summons the platform's share sheet to share text.
-  ///
-  /// Wraps the platform's native share dialog. Can share a text and/or a URL.
-  /// It uses the ACTION_SEND Intent on Android and UIActivityViewController
-  /// on iOS.
-  ///
-  /// The optional `sharePositionOrigin` parameter can be used to specify a global
-  /// origin rect for the share sheet to popover from on iPads. It has no effect
-  /// on non-iPads.
-  ///
-  /// May throw [PlatformException] or [FormatException]
-  /// from [MethodChannel].
+  bool get isMultiple => this.shares.isNotEmpty;
 
-  static Future<void> share(String text, {Rect sharePositionOrigin}) {
-    assert(text != null);
-    assert(text.isNotEmpty);
+  Future<void> share({Rect sharePositionOrigin}) {
     final Map<String, dynamic> params = <String, dynamic>{
-      TEXT: text
+      TYPE: mimeType.toString(),
+      IS_MULTIPLE: isMultiple
     };
-
     if (sharePositionOrigin != null) {
       params['originX'] = sharePositionOrigin.left;
       params['originY'] = sharePositionOrigin.top;
       params['originWidth'] = sharePositionOrigin.width;
       params['originHeight'] = sharePositionOrigin.height;
+    }
+    if (title != null && title.isNotEmpty) {
+      params[TITLE] = title;
+    }
+
+    switch (mimeType) {
+      case ShareType.TYPE_PLAIN_TEXT:
+        if (isMultiple) {
+          for(var i = 0; i < shares.length; i++) {
+            params["$i"] = shares[i].text;
+          }
+        } else {
+          params[TEXT] = text;
+        }
+        break;
+
+      case ShareType.TYPE_IMAGE:
+      case ShareType.TYPE_FILE:
+        if (isMultiple) {
+          for (var i = 0; i < shares.length; i++) {
+            params["$i"] = shares[i].path;
+          }
+        } else {
+          params[PATH] = path;
+          if (text != null && text.isNotEmpty) {
+            params[TEXT] = text;
+          }
+        }
+        break;
+
     }
 
     return channel.invokeMethod('share', params);
-  }
-
-  static Future<void> shareWithTitle(String text, String title, {Rect sharePositionOrigin}) {
-    assert(text != null);
-    assert(text.isNotEmpty);
-    assert(title != null);
-    assert(title.isNotEmpty);
-    final Map<String, dynamic> params = title != null && title.isNotEmpty ? <String, dynamic>{
-      TEXT: text,
-      TITLE: title
-    }
-    : <String, dynamic>{
-      TEXT: text
-    };
-
-    if (sharePositionOrigin != null) {
-      params['originX'] = sharePositionOrigin.left;
-      params['originY'] = sharePositionOrigin.top;
-      params['originWidth'] = sharePositionOrigin.width;
-      params['originHeight'] = sharePositionOrigin.height;
-    }
-
-    return channel.invokeMethod('share', params);
-  }
-
-  static Future<void> shareAnything(String path, String mimeType, {Rect sharePositionOrigin}) {
-    assert(path != null);
-    assert(path.isNotEmpty);
-    final Map<String, dynamic> params = <String, dynamic>{
-      PATH: path,
-      TYPE: mimeType,
-    };
-
-    if (sharePositionOrigin != null) {
-      params['originX'] = sharePositionOrigin.left;
-      params['originY'] = sharePositionOrigin.top;
-      params['originWidth'] = sharePositionOrigin.width;
-      params['originHeight'] = sharePositionOrigin.height;
-    }
-
-    return channel.invokeMethod('shareAnything', params);
-  }
-
-  static Future<void> shareAnythingWithTitle(String path, String title, String mimeType, {Rect sharePositionOrigin}) {
-    assert(path != null);
-    assert(path.isNotEmpty);
-    assert(title != null);
-    assert(title.isNotEmpty);
-    final Map<String, dynamic> params = title != null && title.isNotEmpty ? <String, dynamic>{
-      PATH: path,
-      TYPE: mimeType,
-      TITLE: title
-    }
-    : <String, dynamic>{
-      PATH: path,
-      TYPE: mimeType,
-    };
-
-    if (sharePositionOrigin != null) {
-      params['originX'] = sharePositionOrigin.left;
-      params['originY'] = sharePositionOrigin.top;
-      params['originWidth'] = sharePositionOrigin.width;
-      params['originHeight'] = sharePositionOrigin.height;
-    }
-
-    return channel.invokeMethod('shareAnything', params);
   }
 
 }

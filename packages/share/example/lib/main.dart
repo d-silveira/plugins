@@ -91,11 +91,11 @@ class DemoAppState extends State<DemoApp> {
                               // a RenderObjectWidget. The RaisedButton's RenderObject
                               // has its position and size after it's built.
                               final RenderBox box = context.findRenderObject();
-                              Share.share(_text,
+                              Share.plainText(text: _text).share(
                                   sharePositionOrigin:
                                       box.localToGlobal(Offset.zero) &
                                           box.size);
-//                              Share.shareAnything("content://0@media/external/images/media/2129", "image/*",
+//                              Share.image(path: "content://0@media/external/images/media/2129", mimeType: ShareType.TYPE_IMAGE).share(
 //                                  sharePositionOrigin:
 //                                      box.localToGlobal(Offset.zero) &
 //                                          box.size);

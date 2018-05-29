@@ -15,6 +15,12 @@ import io.flutter.app.FlutterActivity;
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
 
+import static io.flutter.plugins.share.SharePlugin.IS_MULTIPLE;
+import static io.flutter.plugins.share.SharePlugin.PATH;
+import static io.flutter.plugins.share.SharePlugin.TEXT;
+import static io.flutter.plugins.share.SharePlugin.TITLE;
+import static io.flutter.plugins.share.SharePlugin.TYPE;
+
 /**
  * main activity super, handles eventChannel sink creation
  * 					, share intent parsing and redirecting to eventChannel sink stream
@@ -26,11 +32,6 @@ import io.flutter.plugin.common.EventChannel;
 public class FlutterShareReceiverActivity extends FlutterActivity {
 
 	public static final String STREAM = "plugins.flutter.io/receiveshare";
-	public static final String TITLE  = "title";
-	public static final String TEXT   = "text";
-	public static final String PATH   = "path";
-	public static final String TYPE   = "type";
-	public static final String IS_MULTIPLE   = "is_multiple";
 
 	private EventChannel.EventSink eventSink = null;
 	private boolean inited = false;
@@ -106,19 +107,22 @@ public class FlutterShareReceiverActivity extends FlutterActivity {
 					if (!TextUtils.isEmpty(sharedTitle)) {
 						params.put(TITLE, sharedTitle);
 					}
+					if (!intent.hasExtra(Intent.EXTRA_TEXT)) {
+						params.put(TEXT, intent.getStringExtra(Intent.EXTRA_TEXT));
+					}
 					eventSink.success(params);
 				}
 			}
 
 		} else if (Intent.ACTION_SEND_MULTIPLE.equals(action) && type != null) {
 			Log.i(getClass().getSimpleName(), "receiving shared files!");
-			ArrayList<Uri> imageUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+			ArrayList<Uri> uris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
 			if (eventSink != null) {
 				Map<String, String> params = new HashMap<>();
 				params.put(TYPE, type);
 				params.put(IS_MULTIPLE, "true");
-				for (int i = 0; i < imageUris.size(); i++) {
-					params.put(Integer.toString(i), imageUris.get(i).toString());
+				for (int i = 0; i < uris.size(); i++) {
+					params.put(Integer.toString(i), uris.get(i).toString());
 				}
 				eventSink.success(params);
 			}

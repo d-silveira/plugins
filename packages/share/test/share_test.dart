@@ -23,7 +23,7 @@ void main() {
 
   test('sharing null fails', () {
     expect(
-      () => Share.share(null),
+      () => Share.plainText(text:null).share(),
       throwsA(const isInstanceOf<AssertionError>()),
     );
     verifyZeroInteractions(mockChannel);
@@ -31,19 +31,43 @@ void main() {
 
   test('sharing empty fails', () {
     expect(
-      () => Share.share(''),
+      () => Share.plainText(text:'').share(),
       throwsA(const isInstanceOf<AssertionError>()),
     );
     verifyZeroInteractions(mockChannel);
   });
 
   test('sharing origin sets the right params', () async {
-    await Share.share(
-      'some text to share',
+    await Share.plainText(text:
+      'some text to share').share(
       sharePositionOrigin: new Rect.fromLTWH(1.0, 2.0, 3.0, 4.0),
     );
     verify(mockChannel.invokeMethod('share', <String, dynamic>{
       'text': 'some text to share',
+      'originX': 1.0,
+      'originY': 2.0,
+      'originWidth': 3.0,
+      'originHeight': 4.0,
+    }));
+  });
+
+  test('sharing image with empty mimeType', () {
+    expect(
+      () =>
+          Share.image(path: "content://0@media/external/images/media/2129").share(),
+      throwsA(const isInstanceOf<AssertionError>()),
+    );
+    verifyZeroInteractions(mockChannel);
+  });
+
+  test('sharing image', () async {
+    await Share.image(path: "content://0@media/external/images/media/2129",
+        mimeType: ShareType.TYPE_IMAGE).share(
+      sharePositionOrigin: new Rect.fromLTWH(1.0, 2.0, 3.0, 4.0),
+    );
+    verify(mockChannel.invokeMethod('share', <String, dynamic>{
+      'path': "content://0@media/external/images/media/2129",
+      'mimeType': ShareType.TYPE_IMAGE.toString(),
       'originX': 1.0,
       'originY': 2.0,
       'originWidth': 3.0,

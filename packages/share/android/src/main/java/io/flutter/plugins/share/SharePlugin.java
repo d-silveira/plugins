@@ -6,7 +6,9 @@ package io.flutter.plugins.share;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.text.TextUtils;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 import io.flutter.plugin.common.MethodCall;
@@ -22,7 +24,38 @@ import io.flutter.plugin.common.PluginRegistry.Registrar;
  */
 public class SharePlugin implements MethodChannel.MethodCallHandler {
 
-	private static final String CHANNEL = "plugins.flutter.io/shareanything";
+	private static final String CHANNEL     = "plugins.flutter.io/share";
+	public static final  String TITLE       = "title";
+	public static final  String TEXT        = "text";
+	public static final  String PATH        = "path";
+	public static final  String TYPE        = "type";
+	public static final  String IS_MULTIPLE = "is_multiple";
+
+	public static enum ShareType{
+		TYPE_PLAIN_TEXT("text/plain"),
+		TYPE_IMAGE("image/*"),
+		TYPE_FILE("*/*");
+
+		String mimeType;
+
+		ShareType(String mimeType) {
+			this.mimeType = mimeType;
+		}
+
+		static ShareType fromMimeType(String mimeType) {
+			for (ShareType shareType : values()) {
+				if (shareType.mimeType.equals(mimeType)) {
+					return shareType;
+				}
+			}
+			return null;
+		}
+
+		@Override
+		public String toString() {
+			return mimeType;
+		}
+	}
 
 	public static void registerWith(Registrar registrar) {
 		MethodChannel channel = new MethodChannel(registrar.messenger(), CHANNEL);
@@ -43,21 +76,19 @@ public class SharePlugin implements MethodChannel.MethodCallHandler {
 				throw new IllegalArgumentException("Map argument expected");
 			}
 			// Android does not support showing the share sheet at a particular point on screen.
-			if (call.hasArgument("title")) {
-				share((String) call.argument("text"), (String) call.argument("title"));
+			if (call.argument(IS_MULTIPLE)) {
+				ArrayList<Uri> dataList = new ArrayList<>();
+				for (int i = 0; call.hasArgument(Integer.toString(i)); i++) {
+					dataList.add(Uri.parse((String)call.argument(Integer.toString(i))));
+				}
+				shareMultiple(dataList, (String) call.argument(TYPE), call.hasArgument(TITLE) ? (String) call.argument(TITLE) : "");
 			} else {
-				share((String) call.argument("text"));
-			}
-			result.success(null);
-		} else if (call.method.equals("shareAnything")) {
-			if (!(call.arguments instanceof Map)) {
-				throw new IllegalArgumentException("Map argument expected");
-			}
-			// Android does not support showing the share sheet at a particular point on screen.
-			if (call.hasArgument("title")) {
-				shareAnything((String) call.argument("path"), (String) call.argument("mimeType"), (String) call.argument("title"));
-			} else {
-				shareAnything((String) call.argument("path"), (String) call.argument("mimeType"));
+				ShareType shareType = ShareType.fromMimeType((String) call.argument(TYPE));
+				if (ShareType.TYPE_PLAIN_TEXT.equals(shareType)) {
+					share((String) call.argument(TEXT), shareType, call.hasArgument(TITLE) ? (String) call.argument(TITLE) : "");
+				} else {
+					share((String) call.argument(PATH), (call.hasArgument(TEXT) ? (String) call.argument(TEXT) : ""), shareType, (call.hasArgument(TITLE) ? (String) call.argument(TITLE) : ""));
+				}
 			}
 			result.success(null);
 		} else {
@@ -65,22 +96,34 @@ public class SharePlugin implements MethodChannel.MethodCallHandler {
 		}
 	}
 
-	private void share(String text) {
-		share(text, "");
+	private void share (String text, ShareType shareType, String title) {
+		share("", text, shareType, title);
 	}
 
-	private void share(String text, String title) {
-		if (text == null || text.isEmpty()) {
+	private void share (String path, String text, ShareType shareType, String title) {
+		if (!ShareType.TYPE_PLAIN_TEXT.equals(shareType) && (path == null || path.isEmpty())) {
+			throw new IllegalArgumentException("Non-empty path expected");
+		} else if (ShareType.TYPE_PLAIN_TEXT.equals(shareType) && (text == null || text.isEmpty())) {
 			throw new IllegalArgumentException("Non-empty text expected");
+		}
+		if (shareType == null) {
+			throw new IllegalArgumentException("Non-empty mimeType expected");
 		}
 
 		Intent shareIntent = new Intent();
 		shareIntent.setAction(Intent.ACTION_SEND);
-		shareIntent.putExtra(Intent.EXTRA_TEXT, text);
-		if (title != null && !title.isEmpty()) {
+		if (!TextUtils.isEmpty(title)) {
 			shareIntent.putExtra(Intent.EXTRA_SUBJECT, title);
 		}
-		shareIntent.setType("text/plain");
+		if (!ShareType.TYPE_PLAIN_TEXT.equals(shareType)) {
+			shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.parse(path));
+			if (!TextUtils.isEmpty(text)) {
+				shareIntent.putExtra(Intent.EXTRA_TEXT, text);
+			}
+		} else {
+			shareIntent.putExtra(Intent.EXTRA_TEXT, text);
+		}
+		shareIntent.setType(shareType.toString());
 		Intent chooserIntent = Intent.createChooser(shareIntent, null /* dialog title optional */);
 		if (mRegistrar.activity() != null) {
 			mRegistrar.activity().startActivity(chooserIntent);
@@ -90,24 +133,20 @@ public class SharePlugin implements MethodChannel.MethodCallHandler {
 		}
 	}
 
-	private void shareAnything(String path, String mimeType) {
-		shareAnything(path, mimeType, "");
-	}
-
-	private void shareAnything (String path, String mimeType, String title) {
-		if (path == null || path.isEmpty()) {
-			throw new IllegalArgumentException("Non-empty path expected");
+	private void shareMultiple(ArrayList<Uri> dataList, String mimeType, String title) {
+		if (dataList == null || dataList.isEmpty()) {
+			throw new IllegalArgumentException("Non-empty data expected");
 		}
 		if (mimeType == null || mimeType.isEmpty()) {
 			throw new IllegalArgumentException("Non-empty mimeType expected");
 		}
 
 		Intent shareIntent = new Intent();
-		shareIntent.setAction(Intent.ACTION_SEND);
-		if (title != null && !title.isEmpty()) {
+		shareIntent.setAction(Intent.ACTION_SEND_MULTIPLE);
+		if (!TextUtils.isEmpty(title)) {
 			shareIntent.putExtra(Intent.EXTRA_SUBJECT, title);
 		}
-		shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.parse(path));
+		shareIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, dataList);
 		shareIntent.setType(mimeType);
 		Intent chooserIntent = Intent.createChooser(shareIntent, null /* dialog title optional */);
 		if (mRegistrar.activity() != null) {
@@ -118,4 +157,4 @@ public class SharePlugin implements MethodChannel.MethodCallHandler {
 		}
 	}
 
-	}
+}
