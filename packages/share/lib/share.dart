@@ -10,16 +10,36 @@ import 'package:flutter/services.dart';
 import 'package:meta/meta.dart' show visibleForTesting;
 
 class ShareType {
-  final String _type;
-  const ShareType._internal(this._type);
-  @override
-  String toString() {
-    return _type;
-  }
 
   static const ShareType TYPE_PLAIN_TEXT = const ShareType._internal("text/plain");
   static const ShareType TYPE_IMAGE = const ShareType._internal("image/*");
   static const ShareType TYPE_FILE = const ShareType._internal("*/*");
+
+  static List<ShareType> values() {
+    List values = List<ShareType>();
+    values.add(TYPE_PLAIN_TEXT);
+    values.add(TYPE_IMAGE);
+    values.add(TYPE_FILE);
+    return values;
+  }
+
+  final String _type;
+
+  const ShareType._internal(this._type);
+
+  static ShareType fromMimeType(String mimeType) {
+    for(ShareType shareType in values()) {
+      if (shareType.toString() == mimeType) {
+        return shareType;
+      }
+    }
+    return TYPE_FILE;
+  }
+
+  @override
+  String toString() {
+    return _type;
+  }
 
 }
 
@@ -37,6 +57,14 @@ class Share {
   final String text;
   final String path;
   final List<Share> shares;
+
+  Share.nullType() :
+    this.mimeType = null,
+    this.title = '',
+    this.text = '',
+    this.path = '',
+    this.shares = const[]
+  ;
 
   const Share.plainText({
     this.title,
@@ -73,9 +101,54 @@ class Share {
        this.text = '',
        this.path = '';
 
+  // ignore: missing_return
+  static Share fromReceived(Map received) {
+    assert(received.containsKey(TYPE));
+    ShareType type = ShareType.fromMimeType(received[TYPE]);
+    switch (type) {
+      case ShareType.TYPE_PLAIN_TEXT:
+        if (received.containsKey(TITLE)) {
+          return Share.plainText(title: received[TITLE], text: received[TEXT]);
+        } else {
+          return Share.plainText(text: received[TEXT]);
+        }
+        break;
+
+      case ShareType.TYPE_IMAGE:
+        if (received.containsKey(TITLE)) {
+          if (received.containsKey(TEXT)) {
+            return Share.image(path: received[PATH],
+                title: received[TITLE],
+                text: received[TEXT]);
+          } else {
+            return Share.image(path: received[PATH], text: received[TITLE]);
+          }
+        } else {
+          return Share.image(path: received[PATH]);
+        }
+        break;
+
+      case ShareType.TYPE_FILE:
+        if (received.containsKey(TITLE)) {
+          if (received.containsKey(TEXT)) {
+            return Share.file(path: received[PATH],
+                title: received[TITLE],
+                text: received[TEXT]);
+          } else {
+            return Share.file(path: received[PATH], text: received[TITLE]);
+          }
+        } else {
+          return Share.file(path: received[PATH]);
+        }
+        break;
+    }
+  }
+
   /// [MethodChannel] used to communicate with the platform side.
   @visibleForTesting
   static const MethodChannel channel = const MethodChannel('plugins.flutter.io/share');
+
+  bool get isNull => this.mimeType == null;
 
   bool get isMultiple => this.shares.isNotEmpty;
 
@@ -121,7 +194,14 @@ class Share {
 
     }
 
+
+
     return channel.invokeMethod('share', params);
+  }
+
+  @override
+  String toString() {
+    return 'Share{' + (this.isNull ? 'null }' : 'mimeType: $mimeType, title: $title, text: $text, path: $path, shares: $shares}');
   }
 
 }

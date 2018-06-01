@@ -5,8 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:share/share.dart';
-import 'dart:async';
-import 'package:flutter/services.dart';
+import 'package:share/receive_share_state.dart';
 
 void main() {
   runApp(new DemoApp());
@@ -17,38 +16,15 @@ class DemoApp extends StatefulWidget {
   DemoAppState createState() => new DemoAppState();
 }
 
-class DemoAppState extends State<DemoApp> {
+class DemoAppState extends ReceiveShareState<DemoApp> {
   String _text = '';
   String _shared = '';
-  static const stream = const EventChannel('plugins.flutter.io/receiveshare');
 
-  bool shareReceiveEnabled = false;
-  StreamSubscription _shareReceiveSubscription = null;
-
-  void _enableShareReceiving() {
-    if (_shareReceiveSubscription == null) {
-      _shareReceiveSubscription = stream.receiveBroadcastStream().listen(_receiveShare);
-    }
-    shareReceiveEnabled = true;
-    debugPrint("enabled share receiving");
-  }
-
-  void _disableShareReceiving() {
-    if (_shareReceiveSubscription != null) {
-      _shareReceiveSubscription.cancel();
-      _shareReceiveSubscription = null;
-    }
-    shareReceiveEnabled = false;
-    debugPrint("disabled share receiving");
-  }
-
-  void _receiveShare(dynamic shared) {
+  @override
+  void receiveShare(Share shared) {
     debugPrint("Share received - $shared");
-    setState(() { _shared = !shared.containsKey(Share.TYPE)
-        ? ''
-        : (shared[Share.TYPE] == "text/plain"
-          ? shared[Share.TEXT]
-          : shared[Share.PATH]);
+    setState(() {
+      _shared = shared.toString();
     });
   }
 
@@ -108,9 +84,9 @@ class DemoAppState extends State<DemoApp> {
                   child: const Text('Toggle share receiving'),
                   onPressed: () {
                           if (!shareReceiveEnabled) {
-                            _enableShareReceiving();
+                            enableShareReceiving();
                           } else {
-                            _disableShareReceiving();
+                            disableShareReceiving();
                           }
                         },
                 ),
@@ -121,4 +97,5 @@ class DemoAppState extends State<DemoApp> {
           )),
     );
   }
+
 }
